@@ -1,0 +1,291 @@
+{
+  "name": "My workflow 7",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "seo-audit-form",
+        "formTitle": "🔍 SEO Audit Tool",
+        "formDescription": "Enter any website URL to get instant SEO insights and recommendations",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Website URL to Audit",
+              "fieldType": "url",
+              "placeholder": "https://example.com",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        64
+      ],
+      "id": "06b148bf-ae19-420e-9a2f-dd2f95dd5fff",
+      "name": "SEO Audit Form",
+      "webhookId": "seo-audit-form"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Enhanced URL Validation and Preparation\nconst formData = $json;\nconst userUrl = formData['Website URL to Audit'] || formData.url;\n\nif (!userUrl) {\n    throw new Error('No URL provided in form submission');\n}\n\n// Clean and validate URL\nlet cleanUrl = userUrl.trim();\n\n// Add protocol if missing\nif (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {\n    cleanUrl = 'https://' + cleanUrl;\n}\n\n// Remove trailing slash\ncleanUrl = cleanUrl.replace(/\\/$/, '');\n\n// Basic URL validation using regex and string operations\nconst protocolMatch = cleanUrl.match(/^(https?):\\/\\//i);\nif (!protocolMatch) {\n    throw new Error('Invalid URL protocol. Please use HTTP or HTTPS.');\n}\nconst hostnameMatch = cleanUrl.match(/^https?:\\/\\/([^/:?#]+)/i);\nif (!hostnameMatch || !hostnameMatch[1]) {\n    throw new Error('Invalid or missing hostname in URL.');\n}\nconst hostname = hostnameMatch[1].toLowerCase();\nif (\n    hostname === 'localhost' ||\n    hostname.startsWith('127.') ||\n    hostname.startsWith('192.168.')\n) {\n    throw new Error('Cannot audit localhost or local network addresses.');\n}\nif (\n    hostname === 'example.com' ||\n    hostname === 'test.com' ||\n    hostname.endsWith('.local')\n) {\n    throw new Error('Please enter a real website URL.');\n}\n\nconsole.log(`Processing SEO audit for: ${cleanUrl}`);\n\n// Return cleaned URL with metadata\nreturn [{\n    json: {\n        url: cleanUrl,\n        originalUrl: userUrl,\n        domain: hostname,\n        timestamp: new Date().toISOString(),\n        formSubmissionId: $json.formSubmissionId || 'manual-' + Date.now()\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        16,
+        64
+      ],
+      "id": "873e2ab2-3fca-4c2d-a5e1-16fd6b35e974",
+      "name": "URL Processor"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.firecrawl.dev/v0/scrape",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer fc-6652a3a41492477e9dd8c57ae048c9e6"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"url\": $json.url,\n  \"formats\": [\"markdown\", \"html\"],\n  \"includeTags\": [\"title\", \"meta\", \"h1\", \"h2\", \"h3\", \"h4\", \"h5\", \"h6\", \"img\", \"a\", \"link\"],\n  \"excludeTags\": [\"script\", \"style\", \"nav\", \"footer\", \"aside\", \"header\"],\n  \"extractorOptions\": {\n    \"mode\": \"llm-extraction\",\n    \"extractionSchema\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"title\": {\n          \"type\": \"string\",\n          \"description\": \"The main title/h1 of the page\"\n        },\n        \"metaDescription\": {\n          \"type\": \"string\",\n          \"description\": \"Meta description content\"\n        },\n        \"h1Tags\": {\n          \"type\": \"array\",\n          \"items\": {\"type\": \"string\"},\n          \"description\": \"All H1 heading tags text content\"\n        },\n        \"h2Tags\": {\n          \"type\": \"array\",\n          \"items\": {\"type\": \"string\"},\n          \"description\": \"All H2 heading tags text content\"\n        },\n        \"images\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"src\": {\"type\": \"string\"},\n              \"alt\": {\"type\": \"string\"}\n            }\n          },\n          \"description\": \"All images with their src and alt attributes\"\n        },\n        \"links\": {\n          \"type\": \"array\",\n          \"items\": {\n            \"type\": \"object\",\n            \"properties\": {\n              \"href\": {\"type\": \"string\"},\n              \"text\": {\"type\": \"string\"}\n            }\n          },\n          \"description\": \"All links with their href and anchor text\"\n        },\n        \"canonicalUrl\": {\n          \"type\": \"string\",\n          \"description\": \"Canonical URL if present\"\n        }\n      }\n    }\n  },\n  \"timeout\": 30000\n} }}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          },
+          "timeout": 45000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        240,
+        64
+      ],
+      "id": "9f4e11ae-eb91-4d66-8e3e-f3897ca42799",
+      "name": "Firecrawl Scraper"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Comprehensive SEO Analysis Engine\nconst issues = [];\nconst warnings = [];\nconst recommendations = [];\n\n// Get data from previous nodes\nconst urlData = $('URL Processor').item.json;\nconst scrapedData = $json;\nconst url = urlData.url;\nconst domain = urlData.domain;\n\nconsole.log(`Analyzing SEO for: ${url}`);\n\n// Handle Firecrawl response structure\nlet metadata, extractedData, markdown;\n\nif (scrapedData.success && scrapedData.data) {\n    metadata = scrapedData.data.metadata || {};\n    extractedData = scrapedData.data.extract || {};\n    markdown = scrapedData.data.markdown || '';\n    console.log('Firecrawl extraction successful');\n} else {\n    console.error('Firecrawl failed:', scrapedData.error || 'Unknown error');\n    throw new Error(`Failed to crawl website: ${scrapedData.error || 'Website may be unreachable'}`);\n}\n\n// Utility function to add issues with severity scoring\nfunction addIssue(type, description, severity, value = null, recommendation = null) {\n    const issue = {\n        type,\n        description,\n        severity, // 1-10 scale (10 = most critical)\n        url,\n        value,\n        recommendation,\n        timestamp: new Date().toISOString()\n    };\n    \n    switch(type) {\n        case 'Critical':\n            issues.push(issue);\n            break;\n        case 'Warning':\n            warnings.push(issue);\n            break;\n        case 'Recommendation':\n            recommendations.push(issue);\n            break;\n    }\n}\n\n// === 1. TITLE TAG ANALYSIS ===\nconst pageTitle = metadata.title || extractedData.title || '';\nif (!pageTitle.trim()) {\n    addIssue('Critical', 'Missing Page Title', 10, null, 'Add a descriptive title tag between 30-60 characters');\n} else {\n    const titleLength = pageTitle.length;\n    if (titleLength < 20) {\n        addIssue('Critical', `Page Title too short (${titleLength} chars)`, 8, pageTitle, 'Expand title to 30-60 characters with target keywords');\n    } else if (titleLength > 70) {\n        addIssue('Warning', `Page Title too long (${titleLength} chars)`, 6, pageTitle, 'Shorten title to under 60 characters for better SERP display');\n    } else if (titleLength < 30 || titleLength > 60) {\n        addIssue('Warning', `Title length suboptimal (${titleLength} chars)`, 4, pageTitle, 'Optimize to 30-60 characters for best SERP display');\n    }\n    \n    // Check for keyword stuffing\n    const titleWords = pageTitle.toLowerCase().split(/\\s+/);\n    const wordCount = {};\n    titleWords.forEach(word => {\n        if (word.length > 3) {\n            wordCount[word] = (wordCount[word] || 0) + 1;\n        }\n    });\n    \n    const repeatedWords = Object.entries(wordCount).filter(([word, count]) => count > 2);\n    if (repeatedWords.length > 0) {\n        addIssue('Warning', 'Possible keyword stuffing in title', 5, pageTitle, 'Reduce repetition of: ' + repeatedWords.map(([word]) => word).join(', '));\n    }\n}\n\n// === 2. META DESCRIPTION ANALYSIS ===\nconst metaDescription = metadata.description || extractedData.metaDescription || '';\nif (!metaDescription.trim()) {\n    addIssue('Critical', 'Missing Meta Description', 9, null, 'Add compelling meta description (120-160 characters)');\n} else {\n    const metaLength = metaDescription.length;\n    if (metaLength < 120) {\n        addIssue('Warning', `Meta Description too short (${metaLength} chars)`, 5, metaDescription, 'Expand to 120-160 characters for better SERP appeal');\n    } else if (metaLength > 170) {\n        addIssue('Warning', `Meta Description too long (${metaLength} chars)`, 6, metaDescription, 'Shorten to under 160 characters to avoid truncation');\n    }\n}\n\n// === 3. HEADING STRUCTURE ANALYSIS ===\nconst h1Tags = extractedData.h1Tags || [];\nconst h2Tags = extractedData.h2Tags || [];\n\nif (h1Tags.length === 0) {\n    addIssue('Critical', 'Missing H1 Tag', 9, null, 'Add exactly one H1 tag with primary keyword');\n} else if (h1Tags.length > 1) {\n    addIssue('Warning', `Multiple H1 tags (${h1Tags.length})`, 7, h1Tags.join(' | '), 'Use only one H1 tag per page');\n} else {\n    const h1Text = h1Tags[0];\n    if (h1Text && h1Text.length < 10) {\n        addIssue('Warning', 'H1 tag too short', 4, h1Text, 'Make H1 more descriptive (20-70 characters)');\n    } else if (h1Text && h1Text.length > 100) {\n        addIssue('Warning', 'H1 tag too long', 3, h1Text, 'Shorten H1 to under 70 characters');\n    }\n}\n\nif (h1Tags.length > 0 && h2Tags.length === 0) {\n    addIssue('Warning', 'Poor heading hierarchy - no H2 tags', 4, null, 'Add H2 subheadings to improve content structure');\n}\n\n// === 4. IMAGE OPTIMIZATION ===\nconst images = extractedData.images || [];\nlet imagesWithoutAlt = 0;\nlet emptyAltTags = 0;\nlet shortAltTags = 0;\n\nimages.forEach((img) => {\n    if (!img.alt) {\n        imagesWithoutAlt++;\n    } else if (img.alt.trim() === '') {\n        emptyAltTags++;\n    } else if (img.alt.length < 10) {\n        shortAltTags++;\n    }\n});\n\nif (imagesWithoutAlt > 0) {\n    addIssue('Warning', `${imagesWithoutAlt} images missing alt attributes`, 6, null, 'Add descriptive alt text for accessibility and SEO');\n}\n\nif (emptyAltTags > 0) {\n    addIssue('Warning', `${emptyAltTags} images with empty alt text`, 5, null, 'Provide meaningful alt text descriptions');\n}\n\nif (shortAltTags > 0) {\n    addIssue('Recommendation', `${shortAltTags} images with very short alt text`, 2, null, 'Improve alt text to be more descriptive (10+ characters)');\n}\n\nif (images.length === 0) {\n    addIssue('Recommendation', 'No images found', 2, null, 'Consider adding relevant images to improve engagement');\n} else if (images.length > 0) {\n    addIssue('Recommendation', `Found ${images.length} images`, 1, null, 'Good use of visual content');\n}\n\n// === 5. LINK ANALYSIS ===\nconst links = extractedData.links || [];\nconst internalLinks = links.filter(link => \n    link.href && (link.href.includes(domain) || link.href.startsWith('/') || !link.href.startsWith('http'))\n);\nconst externalLinks = links.filter(link => \n    link.href && link.href.startsWith('http') && !link.href.includes(domain)\n);\nconst emptyAnchorText = links.filter(link => !link.text || link.text.trim() === '' || link.text.trim().toLowerCase() === 'click here');\n\nif (links.length === 0) {\n    addIssue('Warning', 'No links found', 5, null, 'Add internal and external links for better SEO');\n} else {\n    if (internalLinks.length === 0) {\n        addIssue('Warning', 'No internal links found', 4, null, 'Add internal links to improve site navigation and SEO');\n    } else if (internalLinks.length < 3) {\n        addIssue('Recommendation', `Only ${internalLinks.length} internal links`, 2, null, 'Consider adding more internal links');\n    }\n    \n    if (externalLinks.length === 0) {\n        addIssue('Recommendation', 'No external links found', 2, null, 'Consider linking to authoritative external sources');\n    }\n    \n    if (emptyAnchorText.length > 0) {\n        addIssue('Warning', `${emptyAnchorText.length} links with poor anchor text`, 5, null, 'Use descriptive anchor text instead of \"click here\"');\n    }\n}\n\n// === 6. TECHNICAL SEO ===\nconst canonicalUrl = extractedData.canonicalUrl || '';\nif (!canonicalUrl) {\n    addIssue('Warning', 'Missing canonical tag', 5, null, 'Add canonical URL to prevent duplicate content issues');\n} else if (!canonicalUrl.includes(domain)) {\n    addIssue('Warning', `Canonical points to external domain: ${canonicalUrl}`, 7, canonicalUrl, 'Ensure canonical URL points to your domain');\n}\n\n// HTTPS Check\nif (!url.startsWith('https://')) {\n    addIssue('Critical', 'Website not using HTTPS', 8, null, 'Implement SSL certificate for security and SEO');\n}\n\n// === 7. CONTENT ANALYSIS ===\nconst contentText = markdown || '';\nconst words = contentText.split(/\\s+/).filter(word => word.length > 0);\nconst wordCount = words.length;\n\nif (wordCount < 200) {\n    addIssue('Critical', `Very low content (${wordCount} words)`, 8, null, 'Add substantial content (300+ words) for better rankings');\n} else if (wordCount < 300) {\n    addIssue('Warning', `Low content volume (${wordCount} words)`, 6, null, 'Consider expanding content for better SEO performance');\n} else if (wordCount > 2000) {\n    addIssue('Recommendation', `Very long content (${wordCount} words)`, 1, null, 'Consider breaking into multiple pages or sections');\n}\n\n// === 8. SEO SCORE CALCULATION ===\nconst criticalPenalty = issues.reduce((sum, issue) => sum + issue.severity, 0);\nconst warningPenalty = warnings.reduce((sum, issue) => sum + (issue.severity * 0.6), 0);\nconst recommendationBonus = Math.min(recommendations.length * 0.5, 5);\n\nconst totalPenalty = criticalPenalty + warningPenalty;\nconst rawScore = Math.max(0, 100 - totalPenalty + recommendationBonus);\nconst seoScore = Math.min(100, Math.round(rawScore));\n\n// === 9. SEO GRADE ===\nlet seoGrade;\nif (seoScore >= 90) seoGrade = 'A+';\nelse if (seoScore >= 80) seoGrade = 'A';\nelse if (seoScore >= 70) seoGrade = 'B';\nelse if (seoScore >= 60) seoGrade = 'C';\nelse if (seoScore >= 50) seoGrade = 'D';\nelse seoGrade = 'F';\n\n// === PREPARE COMPREHENSIVE OUTPUT ===\nconst allIssues = [...issues, ...warnings, ...recommendations];\n\n// Create summary strings for spreadsheet\nconst criticalSummary = issues.map(i => `${i.description} (${i.severity}/10)`).join('; ');\nconst warningSummary = warnings.map(w => `${w.description} (${w.severity}/10)`).join('; ');\nconst recommendationSummary = recommendations.map(r => r.description).join('; ');\n\n// Top 3 priorities\nconst topPriorities = allIssues\n    .filter(issue => issue.severity >= 6)\n    .sort((a, b) => b.severity - a.severity)\n    .slice(0, 3)\n    .map(issue => `${issue.description} (${issue.recommendation || 'Fix required'})`);\n\nconsole.log(`SEO Analysis Complete: Score ${seoScore}/100 (${seoGrade})`);\nconsole.log(`Issues found: ${issues.length} critical, ${warnings.length} warnings, ${recommendations.length} recommendations`);\n\nreturn [{\n    json: {\n        // Basic Info\n        url: url,\n        domain: domain,\n        auditDate: new Date().toISOString(),\n        \n        // SEO Scoring\n        seoScore: seoScore,\n        seoGrade: seoGrade,\n        \n        // Content Metrics\n        pageTitle: pageTitle,\n        titleLength: pageTitle.length,\n        metaDescription: metaDescription,\n        metaDescriptionLength: metaDescription.length,\n        wordCount: wordCount,\n        \n        // Technical Metrics\n        h1Count: h1Tags.length,\n        h1Text: h1Tags.join(' | '),\n        h2Count: h2Tags.length,\n        canonicalUrl: canonicalUrl,\n        isHttps: url.startsWith('https://'),\n        \n        // Link & Image Metrics\n        totalImages: images.length,\n        imagesWithoutAlt: imagesWithoutAlt,\n        totalLinks: links.length,\n        internalLinks: internalLinks.length,\n        externalLinks: externalLinks.length,\n        \n        // Issue Counts\n        criticalIssues: issues.length,\n        warningCount: warnings.length,\n        recommendationCount: recommendations.length,\n        totalIssues: allIssues.length,\n        \n        // Issue Summaries (for spreadsheet)\n        criticalSummary: criticalSummary,\n        warningSummary: warningSummary,\n        recommendationSummary: recommendationSummary,\n        \n        // Top Priorities\n        topPriorities: topPriorities.join(' | '),\n        \n        // Detailed Data (JSON strings for advanced analysis)\n        allIssuesJson: JSON.stringify(allIssues),\n        criticalIssuesJson: JSON.stringify(issues),\n        warningsJson: JSON.stringify(warnings),\n        recommendationsJson: JSON.stringify(recommendations),\n        \n        // Raw Data Sample (truncated)\n        titleSample: pageTitle.substring(0, 100),\n        metaSample: metaDescription.substring(0, 200),\n        contentSample: contentText.substring(0, 500)\n    }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        464,
+        64
+      ],
+      "id": "1988b6c9-6a4a-41e0-9a93-fe9766ed6a5f",
+      "name": "SEO Analyzer"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "14OhMlfMfrJQSy5Rm7_jzJY_uXbHEZorTeek3W44iEVk",
+          "mode": "list",
+          "cachedResultName": "SEO Audit Results"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Summary"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [
+            "url"
+          ],
+          "schema": [
+            {
+              "id": "seoScore",
+              "displayName": "seoScore",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "auditDate",
+              "displayName": "auditDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "titleLength",
+              "displayName": "titleLength",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "metaDescriptionLength",
+              "displayName": "metaDescriptionLength",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "wordCount",
+              "displayName": "wordCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "imageCount",
+              "displayName": "imageCount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "imagesWithoutAlt",
+              "displayName": "imagesWithoutAlt",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "totalLinks",
+              "displayName": "totalLinks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "internalLinks",
+              "displayName": "internalLinks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "externalLinks",
+              "displayName": "externalLinks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        688,
+        64
+      ],
+      "id": "ff284daf-02b9-448e-99c3-fe083637585b",
+      "name": "Save to Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "fgDv40fNryDv9sN0",
+          "name": "Google Sheets account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "SEO Audit Form": {
+      "main": [
+        [
+          {
+            "node": "URL Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "URL Processor": {
+      "main": [
+        [
+          {
+            "node": "Firecrawl Scraper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Firecrawl Scraper": {
+      "main": [
+        [
+          {
+            "node": "SEO Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SEO Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Save to Sheets",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "a2b9b658-4bcc-47ae-ae72-03708129932d",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d6692eacc4d58eee7122a84a09d437eabbda07bfaca213a26dd5b094f7f9fb87"
+  },
+  "id": "0JQqW7MAkQJgMQ3s",
+  "tags": []
+}
