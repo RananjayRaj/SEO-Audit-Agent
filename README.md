@@ -7,7 +7,7 @@ All secrets, webhook IDs, credential IDs and direct sheet IDs have been replaced
 
 ## Files
 
-- `workflows/seo-audit.sanitized.json` — sanitized n8n workflow (importable).
+- `SEO-Auditor.json` — sanitized n8n workflow (importable).
 - `.env.example` — example environment variables.
 - `README.md` — this file.
 
@@ -23,7 +23,7 @@ All secrets, webhook IDs, credential IDs and direct sheet IDs have been replaced
 
    2.	Import workflow
 	•	Open your n8n instance (self-hosted or cloud).
-	•	Import -> From File -> workflows/seo-audit.sanitized.json.
+	•	Import -> From File -> SEO-Auditor.json.
    
 	3.	Create credentials in n8n
    Create and configure the following credentials in the n8n UI and attach them to nodes:
