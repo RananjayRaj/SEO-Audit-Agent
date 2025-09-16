@@ -1,33 +1,52 @@
-# AI-Powered SEO Audit Automation | 2025
-Repositoty of all the SEO automation projects I'm developing.
-**Technologies**: n8n, Firecrawl AI, Google Sheets API, JavaScript, Webhook APIs
-**Challenge**: Manual SEO audits were consuming 6+ hours per website, creating bottlenecks in client deliveries and limiting scalability for marketing campaigns.
-**Solution**: Designed and developed an end-to-end automated SEO analysis platform leveraging AI-powered web scraping and custom algorithms.
+# SEO Audit Tool — n8n workflow (SANITIZED)
 
-**Key Achievements:**
+This repository contains a **sanitized** n8n workflow for an SEO Audit tool.  
+All secrets, webhook IDs, credential IDs and direct sheet IDs have been replaced with placeholders.
 
-- Reduced audit time by 87% (6+ hours → 45 minutes) through intelligent automation
-- Analyzed 10+ websites within first week of deployment, identifying critical SEO gaps in 80% of audited sites
-- Built comprehensive scoring system with 20+ SEO metrics including technical, content, and user experience factors
-- Integrated AI-powered content extraction using Firecrawl for accurate data parsing across diverse website structures
+> ⚠️ Important: **Do not publish real API keys or credential files.** Attach credentials inside your n8n instance.
 
-**Technical Implementation:**
+## Files
 
-- Architected workflow automation using n8n with dynamic URL processing and error handling
-- Implemented AI-enhanced web scraping to extract metadata, content structure, and technical SEO elements
-- Created custom JavaScript algorithms for SEO scoring (0-100 scale) with severity-based issue prioritization
-- Built automated reporting system with Google Sheets integration for client deliverables and progress tracking
-- Designed responsive web form with CORS-compliant APIs for seamless user experience
+- `workflows/seo-audit.sanitized.json` — sanitized n8n workflow (importable).
+- `.env.example` — example environment variables.
+- `README.md` — this file.
 
-**Business Impact:**
+## Quick start
 
-- Improved audit consistency through standardized AI-driven analysis criteria
-- Enhanced client satisfaction with faster turnaround and actionable priority recommendations
-- Generated scalable solution capable of handling unlimited concurrent audits
+1. **Clone repository**
+   ```bash
+   git clone <your-repo-url>
+   cd <your-repo-folder>
 
-**Marketing Applications:
-**
-Streamlined competitive analysis for campaign planning and strategy development
-Enabled rapid website health assessments for lead qualification and client onboarding
-Provided data-driven insights for content marketing and technical optimization recommendations
-Supported portfolio management with automated tracking of client website improvements over time
+
+   -------------------------------
+
+   2.	Import workflow
+	•	Open your n8n instance (self-hosted or cloud).
+	•	Import -> From File -> workflows/seo-audit.sanitized.json.
+	3.	Create credentials in n8n
+Create and configure the following credentials in the n8n UI and attach them to nodes:
+	•	Google Sheets OAuth2 (used by Save to Sheets node).
+	•	Firecrawl / Scraper API key (or whichever scraping provider you use). The workflow expects the Firecrawl API but you may swap the HTTP Request node to another provider.
+	•	No credentials should be pasted into code nodes — attach via the node credential selector.
+	4.	Replace placeholders
+After import, edit node parameters (in the n8n UI) to set real values:
+	•	REPLACE_GOOGLE_SHEET_ID → the target Google Sheets spreadsheet ID (open the sheet in your browser and copy the long ID from the URL).
+	•	REPLACE_FIRECRAWL_API_KEY → add this as your Firecrawl credential in n8n credentials and attach it, or store it in your environment and configure the HTTP Request node to read it securely.
+	•	Attach the Google Sheets OAuth2 credential to the Save to Sheets node.
+Recommended: prefer attaching credentials in n8n UI rather than editing the JSON.
+	5.	Enable trigger
+	•	Open the SEO Audit Form node and activate it. n8n will create a webhook URL for the form trigger. Use that URL or embed the form where needed.
+	6.	Test
+	•	Submit a test URL (avoid local / private IPs) to verify the workflow completes and writes results into your sheet.
+
+Security notes
+	•	Never commit real API keys or client secrets to source control.
+	•	If you accidentally commit a secret, rotate/revoke it immediately.
+	•	Keep secrets in n8n’s credential store or in your environment variables.
+	•	Avoid placing secrets inside code-node strings.
+
+Troubleshooting
+	•	HTTP Request errors: check your scraping API key, quotas, and CORS/network access.
+	•	Google Sheets write errors: make sure the credential has edit access and the spreadsheet ID is correct.
+	•	Webhook or form issues: activate the form trigger node to generate a webhook; webhookId was nulled in the sanitized export.
