@@ -1,5 +1,5 @@
 {
-  "name": "My workflow 7",
+  "name": "My workflow 7 (SANITIZED)",
   "nodes": [
     {
       "parameters": {
@@ -26,7 +26,7 @@
       ],
       "id": "06b148bf-ae19-420e-9a2f-dd2f95dd5fff",
       "name": "SEO Audit Form",
-      "webhookId": "seo-audit-form"
+      "webhookId": null
     },
     {
       "parameters": {
@@ -50,7 +50,7 @@
           "parameters": [
             {
               "name": "Authorization",
-              "value": "Bearer fc-6652a3a41492477e9dd8c57ae048c9e6"
+              "value": "Bearer REPLACE_FIRECRAWL_API_KEY"
             },
             {
               "name": "Content-Type",
@@ -100,7 +100,7 @@
         "operation": "appendOrUpdate",
         "documentId": {
           "__rl": true,
-          "value": "14OhMlfMfrJQSy5Rm7_jzJY_uXbHEZorTeek3W44iEVk",
+          "value": "REPLACE_GOOGLE_SHEET_ID",
           "mode": "list",
           "cachedResultName": "SEO Audit Results"
         },
@@ -224,13 +224,12 @@
       "name": "Save to Sheets",
       "credentials": {
         "googleSheetsOAuth2Api": {
-          "id": "fgDv40fNryDv9sN0",
-          "name": "Google Sheets account 2"
+          "id": "REPLACE_GOOGLE_SHEETS_CREDENTIAL_ID",
+          "name": "REPLACE_GOOGLE_SHEETS_CREDENTIAL_NAME"
         }
       }
     }
   ],
-  "pinData": {},
   "connections": {
     "SEO Audit Form": {
       "main": [
@@ -280,11 +279,6 @@
   "active": false,
   "settings": {
     "executionOrder": "v1"
-  },
-  "versionId": "a2b9b658-4bcc-47ae-ae72-03708129932d",
-  "meta": {
-    "templateCredsSetupCompleted": true,
-    "instanceId": "d6692eacc4d58eee7122a84a09d437eabbda07bfaca213a26dd5b094f7f9fb87"
   },
   "id": "0JQqW7MAkQJgMQ3s",
   "tags": []
